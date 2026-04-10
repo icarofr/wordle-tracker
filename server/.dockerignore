@@ -1,0 +1,9 @@
+.git
+venom/
+client/
+docs/
+guide/
+restful-api-guidelines/
+*.md
+.env*
+*_test.go

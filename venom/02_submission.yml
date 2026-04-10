@@ -1,0 +1,71 @@
+name: Wordle submission
+vars:
+  url: "{{.API_URL}}"
+
+testcases:
+  - name: Setup user
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"SubmitUser","email":"submit@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+        vars:
+          token:
+            from: result.bodyjson.token
+
+  - name: Submit valid wordle
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 900 4/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Setup-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+          - result.bodyjson.wordle_id ShouldEqual 900
+          - result.bodyjson.score ShouldEqual 4
+          - result.bodyjson.raw_input ShouldEqual "Wordle 900 4/6"
+          - result.bodyjson.id ShouldNotBeEmpty
+
+  - name: Submit duplicate wordle returns 409
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 900 3/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Setup-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 409
+          - result.bodyjson.type ShouldEqual /problems/duplicate-entry
+
+  - name: Submit invalid format returns 400
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"not a wordle result"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Setup-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson.type ShouldEqual /problems/invalid-format
+
+  - name: Submit without auth returns 401
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 901 3/6"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 401

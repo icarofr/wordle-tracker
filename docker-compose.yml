@@ -1,0 +1,49 @@
+services:
+  wordle-tracker-server:
+    build:
+      context: ./server
+      dockerfile: ./Dockerfile
+    container_name: wordle-tracker-server
+    mem_limit: 128m
+    cpus: 0.5
+    restart: always
+    environment:
+      HTTP_PORT: "4000"
+      DB_DSN: "${POSTGRES_USER}:${POSTGRES_PASSWORD}@wordle-tracker-postgres:5432/${POSTGRES_DB}?sslmode=disable"
+      DB_AUTOMIGRATE: "true"
+      CORS_ORIGINS: "${CORS_ORIGINS}"
+    networks:
+      - proxy
+    depends_on:
+      wordle-tracker-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/web", "-version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  wordle-tracker-postgres:
+    image: postgres:18
+    container_name: wordle-tracker-postgres
+    mem_limit: 512m
+    cpus: 0.5
+    restart: always
+    env_file: ./.env
+    networks:
+      - proxy
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - ./postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  proxy:
+    external: true

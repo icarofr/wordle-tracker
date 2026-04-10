@@ -1,0 +1,45 @@
+services:
+  test-postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: wordle_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d wordle_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+    tmpfs:
+      - /var/lib/postgresql
+
+  test-server:
+    build:
+      context: ./server
+    environment:
+      HTTP_PORT: "9999"
+      DB_DSN: "test:test@test-postgres:5432/wordle_test?sslmode=disable"
+      DB_AUTOMIGRATE: "true"
+      CORS_ORIGINS: "*"
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/web", "-version"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+
+  venom:
+    image: ovhcom/venom:latest
+    environment:
+      API_URL: "http://test-server:9999"
+      DB_DSN: "postgres://test:test@test-postgres:5432/wordle_test?sslmode=disable"
+    volumes:
+      - ./venom:/workdir
+    working_dir: /workdir
+    command: ["run", "--output-dir=/workdir/results", "--format=json", "."]
+    depends_on:
+      test-server:
+        condition: service_healthy
