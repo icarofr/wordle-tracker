@@ -1,0 +1,6 @@
+bin/
+tmp/
+build-errors.log
+/web
+/gen.go
+openapi.merged.yaml

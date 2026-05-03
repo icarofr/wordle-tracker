@@ -1,0 +1,108 @@
+name: Archive pagination
+vars:
+  url: "{{.API_URL}}"
+
+testcases:
+  - name: Create archive user and submit wordles
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"ArchiveUser","email":"archive@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+        vars:
+          token:
+            from: result.bodyjson.token
+      # Use high wordle IDs (9700-9704) so they sort first in the
+      # descending archive, ahead of wordles from other test suites.
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 9700 3/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 9701 4/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 9702 2/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 9703 5/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 9704 1/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+
+  - name: First page with limit 3
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/wordles?limit=3"
+        headers:
+          Authorization: "Bearer {{.Create-archive-user-and-submit-wordles.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.items.__Len__ ShouldEqual 3
+          - result.bodyjson.items.items0.wordle_id ShouldEqual 9704
+          - result.bodyjson.items.items1.wordle_id ShouldEqual 9703
+          - result.bodyjson.items.items2.wordle_id ShouldEqual 9702
+          - result.bodyjson.next ShouldNotBeEmpty
+        vars:
+          nextUrl:
+            from: result.bodyjson.next
+
+  - name: Second page follows cursor
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}{{.First-page-with-limit-3.nextUrl}}"
+        headers:
+          Authorization: "Bearer {{.Create-archive-user-and-submit-wordles.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.items.items0.wordle_id ShouldEqual 9701
+          - result.bodyjson.items.items1.wordle_id ShouldEqual 9700
+
+  - name: Archive detail for played wordle
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/wordles/9700"
+        headers:
+          Authorization: "Bearer {{.Create-archive-user-and-submit-wordles.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.wordle_id ShouldEqual 9700
+          - result.bodyjson.viewer_has_played ShouldEqual true
+          - result.bodyjson.played_count ShouldBeGreaterThanOrEqualTo 1

@@ -1,0 +1,124 @@
+name: Edge cases
+vars:
+  url: "{{.API_URL}}"
+
+testcases:
+  - name: New user has zero stats
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"EmptyUser","email":"empty@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+        vars:
+          token:
+            from: result.bodyjson.token
+      - type: http
+        method: GET
+        url: "{{.url}}/users/self/stats"
+        headers:
+          Authorization: "Bearer {{.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.games ShouldEqual 0
+          - result.bodyjson.wins ShouldEqual 0
+          - result.bodyjson.fails ShouldEqual 0
+          - result.bodyjson.current_streak ShouldEqual 0
+          - result.bodyjson.max_streak ShouldEqual 0
+
+  - name: All X scores
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"FailUser","email":"fail@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+        vars:
+          token:
+            from: result.bodyjson.token
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 800 X/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 801 X/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 802 X/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: GET
+        url: "{{.url}}/users/self/stats"
+        headers:
+          Authorization: "Bearer {{.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.games ShouldEqual 3
+          - result.bodyjson.wins ShouldEqual 0
+          - result.bodyjson.fails ShouldEqual 3
+          - result.bodyjson.current_streak ShouldEqual 0
+          - result.bodyjson.max_streak ShouldEqual 0
+
+  - name: Registration validation
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"","email":"","password":"short"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson.type ShouldEqual /problems/validation-error
+
+  - name: Duplicate email registration
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"Dup1","email":"dup@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"Dup2","email":"dup@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 409
+          - result.bodyjson.type ShouldEqual /problems/email-taken
+
+  - name: Health check is public
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/health"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.status ShouldEqual ok
