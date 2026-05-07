@@ -1,0 +1,49 @@
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const web = require("solid-js/web");
+const meta = require("@solidjs/meta");
+var _tmpl$ = /* @__PURE__ */ web.template(`<link>`), _tmpl$2 = /* @__PURE__ */ web.template(`<script>`);
+function Asset({
+  tag,
+  attrs,
+  children
+}) {
+  switch (tag) {
+    case "title":
+      return web.createComponent(meta.Title, web.mergeProps(attrs, {
+        children
+      }));
+    case "meta":
+      return web.createComponent(meta.Meta, attrs);
+    case "link":
+      return (() => {
+        var _el$ = _tmpl$();
+        web.spread(_el$, attrs, false, false);
+        return _el$;
+      })();
+    case "style":
+      return web.createComponent(meta.Style, web.mergeProps(attrs, {
+        innerHTML: children
+      }));
+    case "script":
+      if (attrs && attrs.src) {
+        return (() => {
+          var _el$2 = _tmpl$2();
+          web.spread(_el$2, attrs, false, false);
+          return _el$2;
+        })();
+      }
+      if (typeof children === "string") return (() => {
+        var _el$3 = _tmpl$2();
+        web.spread(_el$3, web.mergeProps(attrs, {
+          "innerHTML": children
+        }), false, false);
+        return _el$3;
+      })();
+      return null;
+    default:
+      return null;
+  }
+}
+exports.Asset = Asset;
+//# sourceMappingURL=Asset.cjs.map

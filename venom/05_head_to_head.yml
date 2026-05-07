@@ -1,0 +1,134 @@
+name: Head-to-head stats
+vars:
+  url: "{{.API_URL}}"
+
+testcases:
+  - name: Create two users
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"H2H_Alice","email":"h2h-alice@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+        vars:
+          aliceToken:
+            from: result.bodyjson.token
+          aliceId:
+            from: result.bodyjson.user.id
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"H2H_Bob","email":"h2h-bob@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+        vars:
+          bobToken:
+            from: result.bodyjson.token
+          bobId:
+            from: result.bodyjson.user.id
+
+  - name: Submit shared wordles
+    steps:
+      # Wordle 600 - Alice wins (lower score is better)
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 600 2/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-two-users.aliceToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 600 4/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-two-users.bobToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      # Wordle 601 - Bob wins
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 601 5/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-two-users.aliceToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 601 3/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-two-users.bobToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      # Wordle 602 - Tie
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 602 3/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-two-users.aliceToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 602 3/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-two-users.bobToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+
+  - name: Verify h2h from Alice perspective
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/users/self/head-to-heads/{{.Create-two-users.bobId}}"
+        headers:
+          Authorization: "Bearer {{.Create-two-users.aliceToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.record.total_games ShouldEqual 3
+          - result.bodyjson.record.wins ShouldEqual 1
+          - result.bodyjson.record.losses ShouldEqual 1
+          - result.bodyjson.record.ties ShouldEqual 1
+          - result.bodyjson.opponent.name ShouldEqual H2H_Bob
+
+  - name: Verify h2h symmetry from Bob perspective
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/users/self/head-to-heads/{{.Create-two-users.aliceId}}"
+        headers:
+          Authorization: "Bearer {{.Create-two-users.bobToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.record.total_games ShouldEqual 3
+          - result.bodyjson.record.wins ShouldEqual 1
+          - result.bodyjson.record.losses ShouldEqual 1
+          - result.bodyjson.record.ties ShouldEqual 1
+          - result.bodyjson.opponent.name ShouldEqual H2H_Alice
+
+  - name: Self comparison returns 400
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/users/self/head-to-heads/{{.Create-two-users.aliceId}}"
+        headers:
+          Authorization: "Bearer {{.Create-two-users.aliceToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson.type ShouldEqual /problems/invalid-opponent

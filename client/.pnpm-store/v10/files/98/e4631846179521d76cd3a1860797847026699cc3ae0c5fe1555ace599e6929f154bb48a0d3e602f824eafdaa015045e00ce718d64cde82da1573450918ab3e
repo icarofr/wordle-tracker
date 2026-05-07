@@ -1,0 +1,73 @@
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const web = require("solid-js/web");
+const Solid = require("solid-js");
+const Match = require("./Match.cjs");
+const ClientOnly = require("./ClientOnly.cjs");
+function isModuleNotFoundError(error) {
+  return typeof (error == null ? void 0 : error.message) === "string" && /Failed to fetch dynamically imported module/.test(error.message);
+}
+function lazyRouteComponent(importer, exportName, ssr) {
+  let loadPromise;
+  let comp;
+  let error;
+  const load = () => {
+    if (typeof document === "undefined" && (ssr == null ? void 0 : ssr()) === false) {
+      comp = () => null;
+      return Promise.resolve(comp);
+    }
+    if (!loadPromise) {
+      loadPromise = importer().then((res) => {
+        loadPromise = void 0;
+        comp = res[exportName ?? "default"];
+        return comp;
+      }).catch((err) => {
+        error = err;
+      });
+    }
+    return loadPromise;
+  };
+  const lazyComp = function Lazy(props) {
+    if (error) {
+      if (isModuleNotFoundError(error)) {
+        if (error instanceof Error && typeof window !== "undefined" && typeof sessionStorage !== "undefined") {
+          const storageKey = `tanstack_router_reload:${error.message}`;
+          if (!sessionStorage.getItem(storageKey)) {
+            sessionStorage.setItem(storageKey, "1");
+            window.location.reload();
+            return {
+              default: () => null
+            };
+          }
+        }
+      }
+      throw error;
+    }
+    if (!comp) {
+      const [compResource] = Solid.createResource(load, {
+        initialValue: comp,
+        ssrLoadFrom: "initial"
+      });
+      return web.memo(compResource);
+    }
+    if ((ssr == null ? void 0 : ssr()) === false) {
+      return web.createComponent(ClientOnly.ClientOnly, {
+        get fallback() {
+          return web.createComponent(Match.Outlet, {});
+        },
+        get children() {
+          return web.createComponent(web.Dynamic, web.mergeProps({
+            component: comp
+          }, props));
+        }
+      });
+    }
+    return web.createComponent(web.Dynamic, web.mergeProps({
+      component: comp
+    }, props));
+  };
+  lazyComp.preload = load;
+  return lazyComp;
+}
+exports.lazyRouteComponent = lazyRouteComponent;
+//# sourceMappingURL=lazyRouteComponent.cjs.map

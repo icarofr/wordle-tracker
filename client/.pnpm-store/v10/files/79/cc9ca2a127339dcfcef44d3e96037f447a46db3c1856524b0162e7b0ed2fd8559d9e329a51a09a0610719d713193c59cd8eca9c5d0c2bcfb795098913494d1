@@ -1,0 +1,8 @@
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const web = require("solid-js/web");
+function SafeFragment(props) {
+  return web.memo(() => props.children);
+}
+exports.SafeFragment = SafeFragment;
+//# sourceMappingURL=SafeFragment.cjs.map

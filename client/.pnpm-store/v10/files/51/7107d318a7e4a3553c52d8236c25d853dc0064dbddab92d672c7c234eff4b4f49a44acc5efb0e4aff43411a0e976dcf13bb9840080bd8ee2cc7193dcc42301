@@ -1,0 +1,23 @@
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const web = require("solid-js/web");
+const jsesc = require("jsesc");
+var _tmpl$ = /* @__PURE__ */ web.template(`<script class=tsr-once>`);
+function ScriptOnce({
+  children,
+  log
+}) {
+  if (typeof document !== "undefined") {
+    return null;
+  }
+  return (() => {
+    var _el$ = _tmpl$();
+    web.effect(() => _el$.innerHTML = [children, (log ?? true) && process.env.NODE_ENV === "development" ? `console.info(\`Injected From Server:
+${jsesc(children.toString(), {
+      quotes: "backtick"
+    })}\`)` : "", 'if (typeof __TSR_SSR__ !== "undefined") __TSR_SSR__.cleanScripts()'].filter(Boolean).join("\n"));
+    return _el$;
+  })();
+}
+exports.ScriptOnce = ScriptOnce;
+//# sourceMappingURL=ScriptOnce.cjs.map

@@ -1,0 +1,49 @@
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const web = require("solid-js/web");
+const Solid = require("solid-js");
+const routerCore = require("@tanstack/router-core");
+function _interopNamespaceDefault(e) {
+  const n = Object.create(null, { [Symbol.toStringTag]: { value: "Module" } });
+  if (e) {
+    for (const k in e) {
+      if (k !== "default") {
+        const d = Object.getOwnPropertyDescriptor(e, k);
+        Object.defineProperty(n, k, d.get ? d : {
+          enumerable: true,
+          get: () => e[k]
+        });
+      }
+    }
+  }
+  n.default = e;
+  return Object.freeze(n);
+}
+const Solid__namespace = /* @__PURE__ */ _interopNamespaceDefault(Solid);
+function useAwaited({
+  promise: _promise
+}) {
+  const promise = routerCore.defer(_promise);
+  if (promise[routerCore.TSR_DEFERRED_PROMISE].status === "pending") {
+    throw promise;
+  }
+  if (promise[routerCore.TSR_DEFERRED_PROMISE].status === "error") {
+    throw promise[routerCore.TSR_DEFERRED_PROMISE].error;
+  }
+  return [promise[routerCore.TSR_DEFERRED_PROMISE].data, promise];
+}
+function Await(props) {
+  const [resource] = Solid__namespace.createResource(() => props.promise);
+  return web.createComponent(Solid__namespace.Show, {
+    get fallback() {
+      return props.fallback;
+    },
+    get when() {
+      return resource();
+    },
+    children: (data) => props.children(data())
+  });
+}
+exports.Await = Await;
+exports.useAwaited = useAwaited;
+//# sourceMappingURL=awaited.cjs.map

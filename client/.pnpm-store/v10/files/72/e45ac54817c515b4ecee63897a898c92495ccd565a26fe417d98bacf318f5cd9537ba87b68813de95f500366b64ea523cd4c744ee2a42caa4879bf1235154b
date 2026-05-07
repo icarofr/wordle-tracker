@@ -1,0 +1,62 @@
+{
+  "name": "@solid-devtools/logger",
+  "version": "0.9.8",
+  "description": "Solid debugging utilities for logging the state of the reactivity graph to the console.",
+  "license": "MIT",
+  "author": "Damian Tarnawski <gthetarnav@gmail.com>",
+  "contributors": [],
+  "homepage": "https://github.com/thetarnav/solid-devtools/tree/main/packages/logger#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thetarnav/solid-devtools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thetarnav/solid-devtools/issues"
+  },
+  "private": false,
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/server.cjs",
+  "module": "./dist/server.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "@solid-devtools/source": "./src/index.ts",
+    "browser": {
+      "development": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs"
+      },
+      "import": "./dist/server.js",
+      "require": "./dist/server.cjs"
+    },
+    "development": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "import": "./dist/server.js",
+    "require": "./dist/server.cjs"
+  },
+  "dependencies": {
+    "@nothing-but/utils": "~0.17.0",
+    "@solid-primitives/utils": "^6.3.0",
+    "@solid-devtools/debugger": "^0.27.0",
+    "@solid-devtools/shared": "^0.19.1"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  },
+  "keywords": [
+    "solid",
+    "devtools",
+    "logger",
+    "console",
+    "debugger"
+  ],
+  "scripts": {}
+}

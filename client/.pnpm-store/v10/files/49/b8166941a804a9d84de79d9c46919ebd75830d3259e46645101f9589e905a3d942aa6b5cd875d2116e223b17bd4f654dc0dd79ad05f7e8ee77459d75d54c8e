@@ -1,0 +1,136 @@
+import * as Solid from 'solid-js';
+import { useRouter } from './useRouter';
+function _resolveBlockerOpts(opts, condition) {
+    if (opts === undefined) {
+        return {
+            shouldBlockFn: () => true,
+            withResolver: false,
+        };
+    }
+    if ('shouldBlockFn' in opts) {
+        return opts;
+    }
+    if (typeof opts === 'function') {
+        const shouldBlock = Boolean(condition ?? true);
+        const _customBlockerFn = async () => {
+            if (shouldBlock)
+                return await opts();
+            return false;
+        };
+        return {
+            shouldBlockFn: _customBlockerFn,
+            enableBeforeUnload: shouldBlock,
+            withResolver: false,
+        };
+    }
+    const shouldBlock = Boolean(opts.condition ?? true);
+    const fn = opts.blockerFn;
+    const _customBlockerFn = async () => {
+        if (shouldBlock && fn !== undefined) {
+            return await fn();
+        }
+        return shouldBlock;
+    };
+    return {
+        shouldBlockFn: _customBlockerFn,
+        enableBeforeUnload: shouldBlock,
+        withResolver: fn === undefined,
+    };
+}
+export function useBlocker(opts, condition) {
+    const { shouldBlockFn, enableBeforeUnload = true, disabled = false, withResolver = false, } = _resolveBlockerOpts(opts, condition);
+    const router = useRouter();
+    const { history } = router;
+    const [resolver, setResolver] = Solid.createSignal({
+        status: 'idle',
+        current: undefined,
+        next: undefined,
+        action: undefined,
+        proceed: undefined,
+        reset: undefined,
+    });
+    Solid.createEffect(() => {
+        const blockerFnComposed = async (blockerFnArgs) => {
+            function getLocation(location) {
+                const parsedLocation = router.parseLocation(undefined, location);
+                const matchedRoutes = router.getMatchedRoutes(parsedLocation);
+                if (matchedRoutes.foundRoute === undefined) {
+                    throw new Error(`No route found for location ${location.href}`);
+                }
+                return {
+                    routeId: matchedRoutes.foundRoute.id,
+                    fullPath: matchedRoutes.foundRoute.fullPath,
+                    pathname: parsedLocation.pathname,
+                    params: matchedRoutes.routeParams,
+                    search: parsedLocation.search,
+                };
+            }
+            const current = getLocation(blockerFnArgs.currentLocation);
+            const next = getLocation(blockerFnArgs.nextLocation);
+            const shouldBlock = await shouldBlockFn({
+                action: blockerFnArgs.action,
+                current,
+                next,
+            });
+            if (!withResolver) {
+                return shouldBlock;
+            }
+            if (!shouldBlock) {
+                return false;
+            }
+            const promise = new Promise((resolve) => {
+                setResolver({
+                    status: 'blocked',
+                    current,
+                    next,
+                    action: blockerFnArgs.action,
+                    proceed: () => resolve(false),
+                    reset: () => resolve(true),
+                });
+            });
+            const canNavigateAsync = await promise;
+            setResolver({
+                status: 'idle',
+                current: undefined,
+                next: undefined,
+                action: undefined,
+                proceed: undefined,
+                reset: undefined,
+            });
+            return canNavigateAsync;
+        };
+        return disabled
+            ? undefined
+            : history.block({ blockerFn: blockerFnComposed, enableBeforeUnload });
+    });
+    return resolver;
+}
+const _resolvePromptBlockerArgs = (props) => {
+    if ('shouldBlockFn' in props) {
+        return { ...props };
+    }
+    const shouldBlock = Boolean(props.condition ?? true);
+    const fn = props.blockerFn;
+    const _customBlockerFn = async () => {
+        if (shouldBlock && fn !== undefined) {
+            return await fn();
+        }
+        return shouldBlock;
+    };
+    return {
+        shouldBlockFn: _customBlockerFn,
+        enableBeforeUnload: shouldBlock,
+        withResolver: fn === undefined,
+    };
+};
+export function Block(opts) {
+    const { children, ...rest } = opts;
+    const args = _resolvePromptBlockerArgs(rest);
+    const resolver = useBlocker(args);
+    return children
+        ? typeof children === 'function'
+            ? children(resolver)
+            : children
+        : null;
+}
+//# sourceMappingURL=useBlocker.jsx.map

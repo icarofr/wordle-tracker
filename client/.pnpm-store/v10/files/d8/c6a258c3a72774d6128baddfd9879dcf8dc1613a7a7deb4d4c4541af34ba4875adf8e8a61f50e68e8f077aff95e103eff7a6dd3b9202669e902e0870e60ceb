@@ -1,0 +1,42 @@
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const web = require("solid-js/web");
+const routerCore = require("@tanstack/router-core");
+const CatchBoundary = require("./CatchBoundary.cjs");
+const useRouterState = require("./useRouterState.cjs");
+var _tmpl$ = /* @__PURE__ */ web.template(`<p>Not Found`);
+function CatchNotFound(props) {
+  const resetKey = useRouterState.useRouterState({
+    select: (s) => `not-found-${s.location.pathname}-${s.status}`
+  });
+  return web.createComponent(CatchBoundary.CatchBoundary, {
+    getResetKey: () => resetKey(),
+    onCatch: (error) => {
+      var _a;
+      if (routerCore.isNotFound(error)) {
+        (_a = props.onCatch) == null ? void 0 : _a.call(props, error);
+      } else {
+        throw error;
+      }
+    },
+    errorComponent: ({
+      error
+    }) => {
+      var _a;
+      if (routerCore.isNotFound(error)) {
+        return (_a = props.fallback) == null ? void 0 : _a.call(props, error);
+      } else {
+        throw error;
+      }
+    },
+    get children() {
+      return props.children;
+    }
+  });
+}
+function DefaultGlobalNotFound() {
+  return _tmpl$();
+}
+exports.CatchNotFound = CatchNotFound;
+exports.DefaultGlobalNotFound = DefaultGlobalNotFound;
+//# sourceMappingURL=not-found.cjs.map

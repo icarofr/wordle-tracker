@@ -1,0 +1,151 @@
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const web = require("solid-js/web");
+const Solid = require("solid-js");
+const warning = require("tiny-warning");
+const CatchBoundary = require("./CatchBoundary.cjs");
+const useRouterState = require("./useRouterState.cjs");
+const useRouter = require("./useRouter.cjs");
+const Transitioner = require("./Transitioner.cjs");
+const matchContext = require("./matchContext.cjs");
+const Match = require("./Match.cjs");
+const SafeFragment = require("./SafeFragment.cjs");
+function _interopNamespaceDefault(e) {
+  const n = Object.create(null, { [Symbol.toStringTag]: { value: "Module" } });
+  if (e) {
+    for (const k in e) {
+      if (k !== "default") {
+        const d = Object.getOwnPropertyDescriptor(e, k);
+        Object.defineProperty(n, k, d.get ? d : {
+          enumerable: true,
+          get: () => e[k]
+        });
+      }
+    }
+  }
+  n.default = e;
+  return Object.freeze(n);
+}
+const Solid__namespace = /* @__PURE__ */ _interopNamespaceDefault(Solid);
+function Matches() {
+  const router = useRouter.useRouter();
+  const pendingElement = router.options.defaultPendingComponent ? web.createComponent(router.options.defaultPendingComponent, {}) : null;
+  const ResolvedSuspense = router.isServer || typeof document !== "undefined" && router.clientSsr ? SafeFragment.SafeFragment : Solid__namespace.Suspense;
+  const inner = web.createComponent(ResolvedSuspense, {
+    fallback: pendingElement,
+    get children() {
+      return [web.createComponent(Transitioner.Transitioner, {}), web.createComponent(MatchesInner, {})];
+    }
+  });
+  return router.options.InnerWrap ? web.createComponent(router.options.InnerWrap, {
+    children: inner
+  }) : inner;
+}
+function MatchesInner() {
+  const matchId = useRouterState.useRouterState({
+    select: (s) => {
+      var _a;
+      return (_a = s.matches[0]) == null ? void 0 : _a.id;
+    }
+  });
+  const resetKey = useRouterState.useRouterState({
+    select: (s) => s.loadedAt
+  });
+  return web.createComponent(matchContext.matchContext.Provider, {
+    value: matchId,
+    get children() {
+      return web.createComponent(CatchBoundary.CatchBoundary, {
+        getResetKey: () => resetKey(),
+        errorComponent: CatchBoundary.ErrorComponent,
+        onCatch: (error) => {
+          warning(false, `The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute!`);
+          warning(false, error.message || error.toString());
+        },
+        get children() {
+          return web.memo(() => !!matchId())() ? web.createComponent(Match.Match, {
+            get matchId() {
+              return matchId();
+            }
+          }) : null;
+        }
+      });
+    }
+  });
+}
+function useMatchRoute() {
+  const router = useRouter.useRouter();
+  const status = useRouterState.useRouterState({
+    select: (s) => s.status
+  });
+  return (opts) => {
+    const {
+      pending,
+      caseSensitive,
+      fuzzy,
+      includeSearch,
+      ...rest
+    } = opts;
+    const matchRoute = Solid__namespace.createMemo(() => {
+      status();
+      return router.matchRoute(rest, {
+        pending,
+        caseSensitive,
+        fuzzy,
+        includeSearch
+      });
+    });
+    return matchRoute;
+  };
+}
+function MatchRoute(props) {
+  const status = useRouterState.useRouterState({
+    select: (s) => s.status
+  });
+  return web.createComponent(Solid__namespace.Show, {
+    get when() {
+      return status();
+    },
+    keyed: true,
+    children: (_) => {
+      const matchRoute = useMatchRoute();
+      const params = matchRoute(props)();
+      if (typeof props.children === "function") {
+        return props.children(params);
+      }
+      return params ? props.children : null;
+    }
+  });
+}
+function useMatches(opts) {
+  return useRouterState.useRouterState({
+    select: (state) => {
+      const matches = state.matches;
+      return (opts == null ? void 0 : opts.select) ? opts.select(matches) : matches;
+    }
+  });
+}
+function useParentMatches(opts) {
+  const contextMatchId = Solid__namespace.useContext(matchContext.matchContext);
+  return useMatches({
+    select: (matches) => {
+      matches = matches.slice(0, matches.findIndex((d) => d.id === contextMatchId()));
+      return (opts == null ? void 0 : opts.select) ? opts.select(matches) : matches;
+    }
+  });
+}
+function useChildMatches(opts) {
+  const contextMatchId = Solid__namespace.useContext(matchContext.matchContext);
+  return useMatches({
+    select: (matches) => {
+      matches = matches.slice(matches.findIndex((d) => d.id === contextMatchId()) + 1);
+      return (opts == null ? void 0 : opts.select) ? opts.select(matches) : matches;
+    }
+  });
+}
+exports.MatchRoute = MatchRoute;
+exports.Matches = Matches;
+exports.useChildMatches = useChildMatches;
+exports.useMatchRoute = useMatchRoute;
+exports.useMatches = useMatches;
+exports.useParentMatches = useParentMatches;
+//# sourceMappingURL=Matches.cjs.map

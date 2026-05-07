@@ -1,0 +1,1 @@
+{"version":3,"file":"SafeFragment.js","sources":["../../src/SafeFragment.tsx"],"sourcesContent":["export function SafeFragment(props: any) {\n  return <>{props.children}</>\n}\n"],"names":["SafeFragment","props","_$memo","children"],"mappings":";AAAO,SAASA,aAAaC,OAAY;AACvCC,SAAAA,KAAA,MAAUD,MAAME,QAAQ;AAC1B;"}

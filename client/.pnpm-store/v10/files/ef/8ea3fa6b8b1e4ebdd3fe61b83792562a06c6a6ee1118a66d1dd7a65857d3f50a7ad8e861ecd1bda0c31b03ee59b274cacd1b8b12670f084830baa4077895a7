@@ -1,0 +1,278 @@
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const web = require("solid-js/web");
+const Solid = require("solid-js");
+const refs = require("@solid-primitives/refs");
+const routerCore = require("@tanstack/router-core");
+const useRouterState = require("./useRouterState.cjs");
+const useRouter = require("./useRouter.cjs");
+const utils = require("./utils.cjs");
+const Matches = require("./Matches.cjs");
+function _interopNamespaceDefault(e) {
+  const n = Object.create(null, { [Symbol.toStringTag]: { value: "Module" } });
+  if (e) {
+    for (const k in e) {
+      if (k !== "default") {
+        const d = Object.getOwnPropertyDescriptor(e, k);
+        Object.defineProperty(n, k, d.get ? d : {
+          enumerable: true,
+          get: () => e[k]
+        });
+      }
+    }
+  }
+  n.default = e;
+  return Object.freeze(n);
+}
+const Solid__namespace = /* @__PURE__ */ _interopNamespaceDefault(Solid);
+function useLinkProps(options) {
+  const router = useRouter.useRouter();
+  const [isTransitioning, setIsTransitioning] = Solid__namespace.createSignal(false);
+  let hasRenderFetched = false;
+  const [local, rest] = Solid__namespace.splitProps(Solid__namespace.mergeProps({
+    activeProps: () => ({
+      class: "active"
+    }),
+    inactiveProps: () => ({})
+  }, options), ["activeProps", "inactiveProps", "activeOptions", "to", "preload", "preloadDelay", "hashScrollIntoView", "replace", "startTransition", "resetScroll", "viewTransition", "children", "target", "disabled", "style", "class", "onClick", "onFocus", "onMouseEnter", "onMouseLeave", "onMouseOver", "onMouseOut", "onTouchStart", "ignoreBlocker"]);
+  const [_, propsSafeToSpread] = Solid__namespace.splitProps(rest, ["params", "search", "hash", "state", "mask", "reloadDocument"]);
+  const type = () => {
+    try {
+      new URL(`${local.to}`);
+      return "external";
+    } catch {
+    }
+    return "internal";
+  };
+  const currentSearch = useRouterState.useRouterState({
+    select: (s) => s.location.searchStr
+  });
+  const from = Matches.useMatches({
+    select: (matches) => {
+      var _a;
+      return options.from ?? ((_a = matches[matches.length - 1]) == null ? void 0 : _a.fullPath);
+    }
+  });
+  const _options = () => ({
+    ...options,
+    from: from()
+  });
+  const next = Solid__namespace.createMemo(() => {
+    currentSearch();
+    return router.buildLocation(_options());
+  });
+  const preload = Solid__namespace.createMemo(() => {
+    if (_options().reloadDocument) {
+      return false;
+    }
+    return local.preload ?? router.options.defaultPreload;
+  });
+  const preloadDelay = () => local.preloadDelay ?? router.options.defaultPreloadDelay ?? 0;
+  const isActive = useRouterState.useRouterState({
+    select: (s) => {
+      var _a, _b, _c, _d, _e, _f, _g;
+      if ((_a = local.activeOptions) == null ? void 0 : _a.exact) {
+        const testExact = routerCore.exactPathTest(s.location.pathname, next().pathname, router.basepath);
+        if (!testExact) {
+          return false;
+        }
+      } else {
+        const currentPathSplit = routerCore.removeTrailingSlash(s.location.pathname, router.basepath).split("/");
+        const nextPathSplit = (_c = routerCore.removeTrailingSlash((_b = next()) == null ? void 0 : _b.pathname, router.basepath)) == null ? void 0 : _c.split("/");
+        const pathIsFuzzyEqual = nextPathSplit == null ? void 0 : nextPathSplit.every((d, i) => d === currentPathSplit[i]);
+        if (!pathIsFuzzyEqual) {
+          return false;
+        }
+      }
+      if (((_d = local.activeOptions) == null ? void 0 : _d.includeSearch) ?? true) {
+        const searchTest = routerCore.deepEqual(s.location.search, next().search, {
+          partial: !((_e = local.activeOptions) == null ? void 0 : _e.exact),
+          ignoreUndefined: !((_f = local.activeOptions) == null ? void 0 : _f.explicitUndefined)
+        });
+        if (!searchTest) {
+          return false;
+        }
+      }
+      if ((_g = local.activeOptions) == null ? void 0 : _g.includeHash) {
+        return s.location.hash === next().hash;
+      }
+      return true;
+    }
+  });
+  const doPreload = () => router.preloadRoute(_options()).catch((err) => {
+    console.warn(err);
+    console.warn(routerCore.preloadWarning);
+  });
+  const preloadViewportIoCallback = (entry) => {
+    if (entry == null ? void 0 : entry.isIntersecting) {
+      doPreload();
+    }
+  };
+  const [ref, setRef] = Solid__namespace.createSignal(null);
+  utils.useIntersectionObserver(ref, preloadViewportIoCallback, {
+    rootMargin: "100px"
+  }, {
+    disabled: !!local.disabled || !(preload() === "viewport")
+  });
+  Solid__namespace.createEffect(() => {
+    if (hasRenderFetched) {
+      return;
+    }
+    if (!local.disabled && preload() === "render") {
+      doPreload();
+      hasRenderFetched = true;
+    }
+  });
+  if (type() === "external") {
+    return Solid__namespace.mergeProps(propsSafeToSpread, {
+      ref,
+      get type() {
+        return type();
+      },
+      get href() {
+        return local.to;
+      }
+    }, Solid__namespace.splitProps(local, ["children", "target", "disabled", "style", "class", "onClick", "onFocus", "onMouseEnter", "onMouseLeave", "onMouseOut", "onMouseOver", "onTouchStart"])[0]);
+  }
+  const handleClick = (e) => {
+    if (!local.disabled && !isCtrlEvent(e) && !e.defaultPrevented && (!local.target || local.target === "_self") && e.button === 0) {
+      e.preventDefault();
+      setIsTransitioning(true);
+      const unsub = router.subscribe("onResolved", () => {
+        unsub();
+        setIsTransitioning(false);
+      });
+      return router.navigate({
+        ..._options(),
+        replace: local.replace,
+        resetScroll: local.resetScroll,
+        hashScrollIntoView: local.hashScrollIntoView,
+        startTransition: local.startTransition,
+        viewTransition: local.viewTransition,
+        ignoreBlocker: local.ignoreBlocker
+      });
+    }
+  };
+  const handleFocus = (_2) => {
+    if (local.disabled) return;
+    if (preload()) {
+      doPreload();
+    }
+  };
+  const handleTouchStart = handleFocus;
+  const handleEnter = (e) => {
+    if (local.disabled) return;
+    const eventTarget = e.target || {};
+    if (preload()) {
+      if (eventTarget.preloadTimeout) {
+        return;
+      }
+      eventTarget.preloadTimeout = setTimeout(() => {
+        eventTarget.preloadTimeout = null;
+        doPreload();
+      }, preloadDelay());
+    }
+  };
+  const handleLeave = (e) => {
+    if (local.disabled) return;
+    const eventTarget = e.target || {};
+    if (eventTarget.preloadTimeout) {
+      clearTimeout(eventTarget.preloadTimeout);
+      eventTarget.preloadTimeout = null;
+    }
+  };
+  function callHandler(event, handler) {
+    if (handler) {
+      if (typeof handler === "function") {
+        handler(event);
+      } else {
+        handler[0](handler[1], event);
+      }
+    }
+    return event.defaultPrevented;
+  }
+  function composeEventHandlers(handlers) {
+    return (event) => {
+      for (const handler of handlers) {
+        callHandler(event, handler);
+      }
+    };
+  }
+  const resolvedActiveProps = () => isActive() ? routerCore.functionalUpdate(local.activeProps, {}) ?? {} : {};
+  const resolvedInactiveProps = () => isActive() ? {} : routerCore.functionalUpdate(local.inactiveProps, {});
+  const resolvedClassName = () => [local.class, resolvedActiveProps().class, resolvedInactiveProps().class].filter(Boolean).join(" ");
+  const resolvedStyle = () => ({
+    ...local.style,
+    ...resolvedActiveProps().style,
+    ...resolvedInactiveProps().style
+  });
+  const href = Solid__namespace.createMemo(() => {
+    const nextLocation = next();
+    const maskedLocation = nextLocation == null ? void 0 : nextLocation.maskedLocation;
+    return _options().disabled ? void 0 : maskedLocation ? router.history.createHref(maskedLocation.href) : router.history.createHref(nextLocation == null ? void 0 : nextLocation.href);
+  });
+  return Solid__namespace.mergeProps(propsSafeToSpread, resolvedActiveProps, resolvedInactiveProps, () => {
+    return {
+      href: href(),
+      ref: refs.mergeRefs(setRef, _options().ref),
+      onClick: composeEventHandlers([local.onClick, handleClick]),
+      onFocus: composeEventHandlers([local.onFocus, handleFocus]),
+      onMouseEnter: composeEventHandlers([local.onMouseEnter, handleEnter]),
+      onMouseOver: composeEventHandlers([local.onMouseOver, handleEnter]),
+      onMouseLeave: composeEventHandlers([local.onMouseLeave, handleLeave]),
+      onMouseOut: composeEventHandlers([local.onMouseOut, handleLeave]),
+      onTouchStart: composeEventHandlers([local.onTouchStart, handleTouchStart]),
+      disabled: !!local.disabled,
+      target: local.target,
+      ...Object.keys(resolvedStyle).length && {
+        style: resolvedStyle
+      },
+      ...resolvedClassName() && {
+        class: resolvedClassName()
+      },
+      ...local.disabled && {
+        role: "link",
+        "aria-disabled": true
+      },
+      ...isActive() && {
+        "data-status": "active",
+        "aria-current": "page"
+      },
+      ...isTransitioning() && {
+        "data-transitioning": "transitioning"
+      }
+    };
+  });
+}
+function createLink(Comp) {
+  return (props) => web.createComponent(Link, web.mergeProps(props, {
+    _asChild: Comp
+  }));
+}
+const Link = (props) => {
+  const [local, rest] = Solid__namespace.splitProps(props, ["_asChild"]);
+  const [_, linkProps] = Solid__namespace.splitProps(useLinkProps(rest), ["type", "children"]);
+  const children = () => typeof rest.children === "function" ? rest.children({
+    get isActive() {
+      return linkProps["data-status"] === "active";
+    }
+  }) : rest.children;
+  return web.createComponent(web.Dynamic, web.mergeProps({
+    get component() {
+      return local._asChild ? local._asChild : "a";
+    }
+  }, linkProps, {
+    children
+  }));
+};
+function isCtrlEvent(e) {
+  return !!(e.metaKey || e.altKey || e.ctrlKey || e.shiftKey);
+}
+const linkOptions = (options) => {
+  return options;
+};
+exports.Link = Link;
+exports.createLink = createLink;
+exports.linkOptions = linkOptions;
+exports.useLinkProps = useLinkProps;
+//# sourceMappingURL=link.cjs.map

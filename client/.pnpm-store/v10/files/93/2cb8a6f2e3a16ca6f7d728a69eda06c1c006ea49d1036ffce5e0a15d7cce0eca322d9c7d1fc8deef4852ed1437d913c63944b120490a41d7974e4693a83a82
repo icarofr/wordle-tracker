@@ -1,0 +1,92 @@
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const web = require("solid-js/web");
+const Solid = require("solid-js");
+function _interopNamespaceDefault(e) {
+  const n = Object.create(null, { [Symbol.toStringTag]: { value: "Module" } });
+  if (e) {
+    for (const k in e) {
+      if (k !== "default") {
+        const d = Object.getOwnPropertyDescriptor(e, k);
+        Object.defineProperty(n, k, d.get ? d : {
+          enumerable: true,
+          get: () => e[k]
+        });
+      }
+    }
+  }
+  n.default = e;
+  return Object.freeze(n);
+}
+const Solid__namespace = /* @__PURE__ */ _interopNamespaceDefault(Solid);
+var _tmpl$ = /* @__PURE__ */ web.template(`<div><div><strong>Something went wrong!</strong><button></button></div><div>`), _tmpl$2 = /* @__PURE__ */ web.template(`<div><pre>`), _tmpl$3 = /* @__PURE__ */ web.template(`<code>`);
+function CatchBoundary(props) {
+  return web.createComponent(Solid__namespace.ErrorBoundary, {
+    fallback: (error, reset) => {
+      var _a;
+      (_a = props.onCatch) == null ? void 0 : _a.call(props, error);
+      Solid__namespace.createEffect(Solid__namespace.on([props.getResetKey], () => reset(), {
+        defer: true
+      }));
+      return web.createComponent(web.Dynamic, {
+        get component() {
+          return props.errorComponent ?? ErrorComponent;
+        },
+        error,
+        reset
+      });
+    },
+    get children() {
+      return props.children;
+    }
+  });
+}
+function ErrorComponent({
+  error
+}) {
+  const [show, setShow] = Solid__namespace.createSignal(process.env.NODE_ENV !== "production");
+  return (() => {
+    var _el$ = _tmpl$(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$5 = _el$2.nextSibling;
+    _el$.style.setProperty("padding", ".5rem");
+    _el$.style.setProperty("max-width", "100%");
+    _el$2.style.setProperty("display", "flex");
+    _el$2.style.setProperty("align-items", "center");
+    _el$2.style.setProperty("gap", ".5rem");
+    _el$3.style.setProperty("font-size", "1rem");
+    _el$4.$$click = () => setShow((d) => !d);
+    _el$4.style.setProperty("appearance", "none");
+    _el$4.style.setProperty("font-size", ".6em");
+    _el$4.style.setProperty("border", "1px solid currentColor");
+    _el$4.style.setProperty("padding", ".1rem .2rem");
+    _el$4.style.setProperty("font-weight", "bold");
+    _el$4.style.setProperty("border-radius", ".25rem");
+    web.insert(_el$4, () => show() ? "Hide Error" : "Show Error");
+    _el$5.style.setProperty("height", ".25rem");
+    web.insert(_el$, (() => {
+      var _c$ = web.memo(() => !!show());
+      return () => _c$() ? (() => {
+        var _el$6 = _tmpl$2(), _el$7 = _el$6.firstChild;
+        _el$7.style.setProperty("font-size", ".7em");
+        _el$7.style.setProperty("border", "1px solid red");
+        _el$7.style.setProperty("border-radius", ".25rem");
+        _el$7.style.setProperty("padding", ".3rem");
+        _el$7.style.setProperty("color", "red");
+        _el$7.style.setProperty("overflow", "auto");
+        web.insert(_el$7, (() => {
+          var _c$2 = web.memo(() => !!error.message);
+          return () => _c$2() ? (() => {
+            var _el$8 = _tmpl$3();
+            web.insert(_el$8, () => error.message);
+            return _el$8;
+          })() : null;
+        })());
+        return _el$6;
+      })() : null;
+    })(), null);
+    return _el$;
+  })();
+}
+web.delegateEvents(["click"]);
+exports.CatchBoundary = CatchBoundary;
+exports.ErrorComponent = ErrorComponent;
+//# sourceMappingURL=CatchBoundary.cjs.map

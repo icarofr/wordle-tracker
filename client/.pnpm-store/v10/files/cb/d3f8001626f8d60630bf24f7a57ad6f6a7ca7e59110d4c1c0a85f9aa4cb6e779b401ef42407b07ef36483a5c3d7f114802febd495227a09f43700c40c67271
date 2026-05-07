@@ -1,0 +1,29 @@
+import * as Solid from "solid-js";
+import { useRouter } from "./useRouter.js";
+function useNavigate(_defaultOpts) {
+  const {
+    navigate
+  } = useRouter();
+  return (options) => {
+    return navigate({
+      from: _defaultOpts == null ? void 0 : _defaultOpts.from,
+      ...options
+    });
+  };
+}
+function Navigate(props) {
+  const {
+    navigate
+  } = useRouter();
+  Solid.onMount(() => {
+    navigate({
+      ...props
+    });
+  });
+  return null;
+}
+export {
+  Navigate,
+  useNavigate
+};
+//# sourceMappingURL=useNavigate.js.map
