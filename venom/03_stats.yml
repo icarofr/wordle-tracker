@@ -1,0 +1,128 @@
+name: User statistics
+vars:
+  url: "{{.API_URL}}"
+
+testcases:
+  - name: Create stats user
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"StatsUser","email":"stats@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+        vars:
+          token:
+            from: result.bodyjson.token
+
+  - name: Submit 10 wordles with known scores
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 100 3/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-stats-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 101 2/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-stats-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 102 4/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-stats-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 103 3/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-stats-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 104 1/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-stats-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 105 X/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-stats-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 106 5/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-stats-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 107 2/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-stats-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 108 3/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-stats-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 109 4/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-stats-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+
+  - name: Verify stats are correct
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/users/self/stats"
+        headers:
+          Authorization: "Bearer {{.Create-stats-user.token}}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.games ShouldEqual 10
+          - result.bodyjson.wins ShouldEqual 9
+          - result.bodyjson.fails ShouldEqual 1
+          - result.bodyjson.average_score ShouldEqual 3.4
+          - result.bodyjson.win_percentage ShouldEqual 90
+          - result.bodyjson.current_streak ShouldEqual 4
+          - result.bodyjson.max_streak ShouldEqual 5

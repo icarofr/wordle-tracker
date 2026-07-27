@@ -1,0 +1,136 @@
+name: Leaderboard
+vars:
+  url: "{{.API_URL}}"
+  dsn: "{{.DB_DSN}}"
+
+testcases:
+  # Runs last. Truncates the database so we control the exact user set.
+  # The leaderboard counts wordles shared by ALL users, so we need to
+  # own the complete state.
+  - name: Reset database
+    steps:
+      - type: sql
+        driver: postgres
+        dsn: "{{.dsn}}"
+        commands:
+          - "TRUNCATE wordle_entries, user_tokens, wordles, users CASCADE"
+
+  - name: Create three users
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"Alice","email":"alice-lb@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+        vars:
+          aliceToken:
+            from: result.bodyjson.token
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"Bob","email":"bob-lb@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+        vars:
+          bobToken:
+            from: result.bodyjson.token
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"Charlie","email":"charlie-lb@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+        vars:
+          charlieToken:
+            from: result.bodyjson.token
+
+  - name: Submit shared wordles
+    steps:
+      # Wordle 500: Alice 2, Bob 4, Charlie 3
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 500 2/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-three-users.aliceToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 500 4/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-three-users.bobToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 500 3/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-three-users.charlieToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      # Wordle 501: Alice 1, Bob 3, Charlie 5
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 501 1/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-three-users.aliceToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 501 3/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-three-users.bobToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+      - type: http
+        method: POST
+        url: "{{.url}}/wordle-submissions"
+        body: '{"raw_input":"Wordle 501 5/6"}'
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{.Create-three-users.charlieToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 201
+
+  - name: Verify leaderboard
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/leaderboards/current"
+        headers:
+          Authorization: "Bearer {{.Create-three-users.aliceToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          # Exactly 2 wordles shared by all 3 users
+          - result.bodyjson.shared_wordles ShouldEqual 2
+          # Exactly 3 players
+          - result.bodyjson.items.__Len__ ShouldEqual 3
+          # Ranking: sorted by games desc, avg asc, win% desc, name asc
+          # All have 2 games. Avg: Alice 1.5, Bob 3.5, Charlie 4.0
+          - result.bodyjson.items.items0.player.name ShouldEqual Alice
+          - result.bodyjson.items.items0.total_games ShouldEqual 2
+          - result.bodyjson.items.items0.average_score ShouldEqual 1.5
+          - result.bodyjson.items.items1.player.name ShouldEqual Bob
+          - result.bodyjson.items.items1.total_games ShouldEqual 2
+          - result.bodyjson.items.items1.average_score ShouldEqual 3.5
+          - result.bodyjson.items.items2.player.name ShouldEqual Charlie
+          - result.bodyjson.items.items2.total_games ShouldEqual 2
+          - result.bodyjson.items.items2.average_score ShouldEqual 4

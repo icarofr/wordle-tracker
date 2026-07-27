@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+
+# Environment and secrets
+.env
+.env.*
+
+# Client (not needed for server build)
+client/
+
+# Database
+postgres/
+
+# Scripts
+scripts/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go build artifacts
+server/tmp/

@@ -1,0 +1,100 @@
+name: Authentication flow
+vars:
+  url: "{{.API_URL}}"
+
+testcases:
+  - name: Health check is available
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/health"
+        retry: 10
+        retry_if:
+          - result.statuscode ShouldNotEqual 200
+        delay: 2
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.status ShouldEqual ok
+
+  - name: Register a new user
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/users"
+        body: '{"name":"AuthTest","email":"auth-test@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 201
+          - result.bodyjson.user.name ShouldEqual AuthTest
+          - result.bodyjson.user.email ShouldEqual auth-test@test.com
+          - result.bodyjson.token ShouldNotBeEmpty
+        vars:
+          authToken:
+            from: result.bodyjson.token
+
+  - name: Login with registered credentials
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/sessions"
+        body: '{"email":"auth-test@test.com","password":"password123"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.user.name ShouldEqual AuthTest
+          - result.bodyjson.token ShouldNotBeEmpty
+        vars:
+          loginToken:
+            from: result.bodyjson.token
+
+  - name: Access protected route with token
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/users/self"
+        headers:
+          Authorization: "Bearer {{.Login-with-registered-credentials.loginToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.name ShouldEqual AuthTest
+
+  - name: Protected route without token returns 401
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/users/self"
+        assertions:
+          - result.statuscode ShouldEqual 401
+
+  - name: Login with wrong password returns 401
+    steps:
+      - type: http
+        method: POST
+        url: "{{.url}}/sessions"
+        body: '{"email":"auth-test@test.com","password":"wrongpassword"}'
+        headers:
+          Content-Type: application/json
+        assertions:
+          - result.statuscode ShouldEqual 401
+
+  - name: Logout
+    steps:
+      - type: http
+        method: DELETE
+        url: "{{.url}}/sessions/current"
+        headers:
+          Authorization: "Bearer {{.Login-with-registered-credentials.loginToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 204
+
+  - name: Token rejected after logout
+    steps:
+      - type: http
+        method: GET
+        url: "{{.url}}/users/self"
+        headers:
+          Authorization: "Bearer {{.Login-with-registered-credentials.loginToken}}"
+        assertions:
+          - result.statuscode ShouldEqual 401

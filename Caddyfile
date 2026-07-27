@@ -1,0 +1,14 @@
+:80 {
+	# API proxy
+	handle /api/* {
+		strip_prefix /api
+		reverse_proxy api:4000
+	}
+
+	# Static SPA
+	handle {
+		root * /srv
+		try_files {path} {path}/ /index.html
+		file_server
+	}
+}
